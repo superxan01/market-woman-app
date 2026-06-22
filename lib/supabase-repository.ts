@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { CreateOrderInput, Order, OrderRepository, OrderStatus, Quote, Rider, TeamMember, UserRole } from "./types";
+import type { CreateOrderInput, Order, OrderAttachment, OrderRepository, OrderStatus, Quote, Rider, TeamMember, UserRole } from "./types";
 
 type OrderRow = {
   id: string; status: OrderStatus; area: string; shopping_list: unknown; note: string | null;
@@ -64,6 +64,17 @@ export const supabaseOrderRepository: OrderRepository = {
       await client.storage.from("order-attachments").remove([storagePath]);
       throw recordError;
     }
+  },
+  async listOrderAttachments() {
+    const client = requireClient();
+    const { data, error } = await client.from("order_attachments").select("id,order_id,storage_path,file_name").order("created_at");
+    if (error) throw error;
+    const attachments = await Promise.all((data ?? []).map(async (attachment): Promise<OrderAttachment> => {
+      const { data: signed, error: signedError } = await client.storage.from("order-attachments").createSignedUrl(attachment.storage_path, 60 * 15);
+      if (signedError || !signed?.signedUrl) throw signedError ?? new Error("Could not create an attachment link.");
+      return { id: attachment.id, orderId: attachment.order_id, fileName: attachment.file_name, url: signed.signedUrl };
+    }));
+    return attachments;
   },
   async updateStatus(id, status) {
     const client = requireClient();

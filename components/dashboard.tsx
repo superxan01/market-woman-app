@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { orderRepository } from "@/lib/repositories";
 import { customerTrackingStages, statusLabel, trackingStageIndex } from "@/lib/order-state";
 import { supabase } from "@/lib/supabase";
-import type { Order, Quote, Rider, TeamMember, UserRole } from "@/lib/types";
+import type { Order, OrderAttachment, Quote, Rider, TeamMember, UserRole } from "@/lib/types";
 
 type OperationsTab = "orders" | "vendors" | "riders" | "team";
 const roleLabel = (role: UserRole) => role.replaceAll("_", " ");
@@ -18,6 +18,7 @@ export function Dashboard({ role }: { role: UserRole }) {
   const [vendors, setVendors] = useState<Rider[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [attachments, setAttachments] = useState<OrderAttachment[]>([]);
   const [items, setItems] = useState("");
   const [area, setArea] = useState("");
   const [note, setNote] = useState("");
@@ -28,16 +29,18 @@ export function Dashboard({ role }: { role: UserRole }) {
 
   const load = useCallback(async () => {
     try {
-      const [loadedOrders, loadedRiders, loadedVendors, loadedQuotes] = await Promise.all([
+      const [loadedOrders, loadedRiders, loadedVendors, loadedQuotes, loadedAttachments] = await Promise.all([
         orderRepository.listOrders(),
         isOperations ? orderRepository.listRiders() : Promise.resolve([]),
         isOperations ? orderRepository.listVendors() : Promise.resolve([]),
-        role === "customer" ? Promise.resolve([]) : orderRepository.listQuotes()
+        role === "customer" ? Promise.resolve([]) : orderRepository.listQuotes(),
+        orderRepository.listOrderAttachments()
       ]);
       setOrders(loadedOrders);
       setRiders(loadedRiders);
       setVendors(loadedVendors);
       setQuotes(loadedQuotes);
+      setAttachments(loadedAttachments);
       if (isOperations && activeTab === "team") setTeam(await orderRepository.listTeamMembers());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load the marketplace data.");
@@ -96,15 +99,16 @@ export function Dashboard({ role }: { role: UserRole }) {
       {isOperations && activeTab === "riders" && <Roster title="Riders" description="Riders become available for assignment once their account is promoted." people={riders} empty="No riders are registered yet. Promote an existing account from Support team." />}
       {isOperations && activeTab === "team" && <TeamPanel team={team} canEdit={hasRoleEditor} busy={busy} onRoleChange={(id, nextRole) => run(async () => { await orderRepository.updateProfileRole(id, nextRole); }, "Role updated successfully.")} />}
 
-      {(!isOperations || activeTab === "orders") && <section className="orders-section"><div className="section-heading"><div><p className="eyebrow">{isOperations ? "INCOMING ORDERS" : role === "vendor" ? "ASSIGNED REQUESTS" : role === "rider" ? "ACTIVE DELIVERIES" : "ORDER HISTORY"}</p><h2>{isOperations ? "Orders needing attention" : role === "vendor" ? "Requests to quote" : role === "rider" ? "Deliveries in your care" : "Your requests"}</h2></div><span className="count">{orders.length} items</span></div><div className="order-grid">{orders.map((order) => <OrderCard key={order.id} order={order} role={role} riders={riders} vendors={vendors} quotes={quotes.filter((quote) => quote.orderId === order.id)} busy={busy} quote={quoteValues[order.id] ?? { amount: "", note: "" }} onQuoteChange={(value) => setQuoteValues((current) => ({ ...current, [order.id]: { ...current[order.id], ...value } }))} onQuote={(event) => submitQuote(event, order.id)} onAcceptQuote={(quoteId) => run(async () => { await orderRepository.acceptQuote(quoteId); }, "Quote accepted. The order is ready for rider assignment.")} onVendor={(vendorId) => run(async () => { await orderRepository.assignVendor(order.id, vendorId); }, "Vendor assigned successfully.")} onRider={(riderId) => run(async () => { await orderRepository.assignRider(order.id, riderId); }, "Rider assigned successfully.")} onStatus={(status) => run(async () => { await orderRepository.updateStatus(order.id, status); }, `Order marked ${statusLabel(status).toLowerCase()}.`)} />)}</div>{!orders.length && <div className="empty">No live orders yet. {role === "customer" ? "Create your first market request above." : role === "vendor" ? "Orders assigned to you will appear here." : role === "rider" ? "Assigned deliveries will appear here." : "Orders will appear here as customers submit them."}</div>}</section>}
+      {(!isOperations || activeTab === "orders") && <section className="orders-section"><div className="section-heading"><div><p className="eyebrow">{isOperations ? "INCOMING ORDERS" : role === "vendor" ? "ASSIGNED REQUESTS" : role === "rider" ? "ACTIVE DELIVERIES" : "ORDER HISTORY"}</p><h2>{isOperations ? "Orders needing attention" : role === "vendor" ? "Requests to quote" : role === "rider" ? "Deliveries in your care" : "Your requests"}</h2></div><span className="count">{orders.length} items</span></div><div className="order-grid">{orders.map((order) => <OrderCard key={order.id} order={order} role={role} riders={riders} vendors={vendors} quotes={quotes.filter((quote) => quote.orderId === order.id)} attachments={attachments.filter((attachment) => attachment.orderId === order.id)} busy={busy} quote={quoteValues[order.id] ?? { amount: "", note: "" }} onQuoteChange={(value) => setQuoteValues((current) => ({ ...current, [order.id]: { ...current[order.id], ...value } }))} onQuote={(event) => submitQuote(event, order.id)} onAcceptQuote={(quoteId) => run(async () => { await orderRepository.acceptQuote(quoteId); }, "Quote accepted. The order is ready for rider assignment.")} onVendor={(vendorId) => run(async () => { await orderRepository.assignVendor(order.id, vendorId); }, "Vendor assigned successfully.")} onRider={(riderId) => run(async () => { await orderRepository.assignRider(order.id, riderId); }, "Rider assigned successfully.")} onStatus={(status) => run(async () => { await orderRepository.updateStatus(order.id, status); }, `Order marked ${statusLabel(status).toLowerCase()}.`)} />)}</div>{!orders.length && <div className="empty">No live orders yet. {role === "customer" ? "Create your first market request above." : role === "vendor" ? "Orders assigned to you will appear here." : role === "rider" ? "Assigned deliveries will appear here." : "Orders will appear here as customers submit them."}</div>}</section>}
     </section>
   </main>;
 }
 
-function OrderCard({ order, role, riders, vendors, quotes, busy, quote, onQuoteChange, onQuote, onAcceptQuote, onVendor, onRider, onStatus }: { order: Order; role: UserRole; riders: Rider[]; vendors: Rider[]; quotes: Quote[]; busy: boolean; quote: { amount: string; note: string }; onQuoteChange: (value: Partial<{ amount: string; note: string }>) => void; onQuote: (event: FormEvent) => void; onAcceptQuote: (id: string) => void; onVendor: (id: string) => void; onRider: (id: string) => void; onStatus: (status: "picked_up" | "delivered") => void }) {
+function OrderCard({ order, role, riders, vendors, quotes, attachments, busy, quote, onQuoteChange, onQuote, onAcceptQuote, onVendor, onRider, onStatus }: { order: Order; role: UserRole; riders: Rider[]; vendors: Rider[]; quotes: Quote[]; attachments: OrderAttachment[]; busy: boolean; quote: { amount: string; note: string }; onQuoteChange: (value: Partial<{ amount: string; note: string }>) => void; onQuote: (event: FormEvent) => void; onAcceptQuote: (id: string) => void; onVendor: (id: string) => void; onRider: (id: string) => void; onStatus: (status: "picked_up" | "delivered") => void }) {
   const isOperations = role === "super_admin" || role === "support_rep";
   return <article className="order-card"><div className="card-top"><span className={`status ${order.status}`}>{statusLabel(order.status)}</span><small>{orderReference(order.id)}</small></div><h3>{isOperations ? order.customerName : order.area}</h3><p className="area">⌖ {order.area} · {order.createdAt}</p><ul>{order.items.map((item) => <li key={item}>{item}</li>)}</ul>{order.total !== undefined && <p className="order-total">Total approved: <strong>₦{order.total.toLocaleString("en-NG")}</strong></p>}{order.vendor && <p className="assignment">Vendor: <strong>{order.vendor}</strong></p>}{order.rider && <p className="assignment">Rider: <strong>{order.rider}</strong></p>}{order.note && <p className="note">“{order.note}”</p>}
     {role === "customer" && <div className="tracking"><p className="eyebrow">DELIVERY TRACKING</p><div className="tracking-stages">{customerTrackingStages.map((stage, index) => <span className={index <= trackingStageIndex(order.status) ? "done" : ""} key={stage}>{statusLabel(stage)}</span>)}</div></div>}
+    {!!attachments.length && <div className="attachments"><p className="eyebrow">ORDER IMAGES</p>{attachments.map((attachment) => <a key={attachment.id} href={attachment.url} target="_blank" rel="noreferrer">View {attachment.fileName}</a>)}</div>}
     {!!quotes.length && <div className="quote-list"><p className="eyebrow">VENDOR QUOTES</p>{quotes.map((item) => <div className="quote-row" key={item.id}><div><strong>₦{item.amount.toLocaleString("en-NG")}</strong><span>{item.vendor} · {item.status}</span>{item.note && <small>{item.note}</small>}</div>{isOperations && item.status === "pending" && <button className="outline mini" disabled={busy} onClick={() => onAcceptQuote(item.id)}>Accept quote</button>}</div>)}</div>}
     {isOperations && order.status === "requested" && <label className="assign">Assign vendor<select value={order.vendorId ?? ""} onChange={(e) => onVendor(e.target.value)} disabled={busy}><option value="" disabled>Select vendor</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.fullName}</option>)}</select></label>}
     {isOperations && order.status === "confirmed" && <label className="assign">Assign rider<select defaultValue="" onChange={(e) => onRider(e.target.value)} disabled={busy}><option value="" disabled>Select rider</option>{riders.map((rider) => <option key={rider.id} value={rider.id}>{rider.fullName}</option>)}</select></label>}

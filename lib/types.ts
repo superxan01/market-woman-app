@@ -9,12 +9,14 @@ export type Quote = { id: string; orderId: string; vendor: string; amount: numbe
 export type Delivery = { id: string; orderId: string; rider: string; status: Extract<OrderStatus, "assigned" | "picked_up" | "delivered"> };
 export type Rider = { id: string; fullName: string };
 export type TeamMember = { id: string; fullName: string; phone?: string; role: UserRole; createdAt: string };
+export type OrderAttachment = { id: string; orderId: string; fileName: string; url: string };
 export type CreateOrderInput = { customerName: string; customerPhone: string; items: string[]; area: string; note?: string };
 export type OrderRepository = {
   listOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   createOrder(input: CreateOrderInput): Promise<Order>;
   uploadOrderAttachment(orderId: string, file: File): Promise<void>;
+  listOrderAttachments(): Promise<OrderAttachment[]>;
   updateStatus(id: string, status: OrderStatus): Promise<Order>;
   listRiders(): Promise<Rider[]>;
   listVendors(): Promise<Rider[]>;
