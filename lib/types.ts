@@ -11,6 +11,7 @@ export type Rider = { id: string; fullName: string };
 export type TeamMember = { id: string; fullName: string; phone?: string; role: UserRole; createdAt: string };
 export type OrderAttachment = { id: string; orderId: string; fileName: string; url: string };
 export type OrderFeedback = { orderId: string; rating: number; comment?: string };
+export type DeliveryProof = { id: string; orderId: string; fileName: string; url: string };
 export type CreateOrderInput = { customerName: string; customerPhone: string; items: string[]; area: string; note?: string };
 export type OrderRepository = {
   listOrders(): Promise<Order[]>;
@@ -21,6 +22,8 @@ export type OrderRepository = {
   updateStatus(id: string, status: OrderStatus): Promise<Order>;
   cancelOrder(id: string): Promise<Order>;
   submitOrderFeedback(input: OrderFeedback): Promise<void>;
+  uploadDeliveryProof(orderId: string, file: File): Promise<void>;
+  listDeliveryProofs(): Promise<DeliveryProof[]>;
   listRiders(): Promise<Rider[]>;
   listVendors(): Promise<Rider[]>;
   assignRider(id: string, riderId: string): Promise<Order>;

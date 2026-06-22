@@ -1,0 +1,7 @@
+create table public.delivery_proofs (id uuid primary key default gen_random_uuid(), order_id uuid not null references public.orders(id) on delete cascade, rider_id uuid not null references public.profiles(id), storage_path text not null unique, file_name text not null, created_at timestamptz not null default now());
+alter table public.delivery_proofs enable row level security;
+create policy "participants view delivery proofs" on public.delivery_proofs for select to authenticated using (exists (select 1 from public.orders where orders.id = order_id and (orders.customer_id = auth.uid() or orders.rider_id = auth.uid() or public.can_assign_orders())));
+create policy "riders submit delivery proofs" on public.delivery_proofs for insert to authenticated with check (rider_id = auth.uid() and exists (select 1 from public.orders where orders.id = order_id and orders.rider_id = auth.uid() and orders.status = 'picked_up'));
+insert into storage.buckets (id,name,public) values ('delivery-proofs','delivery-proofs',false) on conflict (id) do nothing;
+create policy "riders upload proof files" on storage.objects for insert to authenticated with check (bucket_id = 'delivery-proofs' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "proof participants read files" on storage.objects for select to authenticated using (bucket_id = 'delivery-proofs' and ((storage.foldername(name))[1] = auth.uid()::text or public.can_assign_orders()));

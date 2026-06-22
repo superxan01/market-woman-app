@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { CreateOrderInput, Order, OrderAttachment, OrderRepository, OrderStatus, Quote, Rider, TeamMember, UserRole } from "./types";
+import type { CreateOrderInput, DeliveryProof, Order, OrderAttachment, OrderRepository, OrderStatus, Quote, Rider, TeamMember, UserRole } from "./types";
 
 type OrderRow = {
   id: string; status: OrderStatus; area: string; shopping_list: unknown; note: string | null;
@@ -103,6 +103,16 @@ export const supabaseOrderRepository: OrderRepository = {
     if (!session.user) throw new Error("Sign in is required before leaving a rating.");
     const { error } = await client.from("order_feedback").upsert({ order_id: orderId, customer_id: session.user.id, rating, comment: comment || null }, { onConflict: "order_id,customer_id" });
     if (error) throw error;
+  },
+  async uploadDeliveryProof(orderId, file) {
+    const client = requireClient(); const { data: session } = await client.auth.getUser(); if (!session.user) throw new Error("Sign in is required.");
+    const path = `${session.user.id}/${orderId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+    const { error: uploadError } = await client.storage.from("delivery-proofs").upload(path, file, { contentType: file.type }); if (uploadError) throw uploadError;
+    const { error } = await client.from("delivery_proofs").insert({ order_id: orderId, rider_id: session.user.id, storage_path: path, file_name: file.name }); if (error) throw error;
+  },
+  async listDeliveryProofs() {
+    const client = requireClient(); const { data, error } = await client.from("delivery_proofs").select("id,order_id,storage_path,file_name"); if (error) throw error;
+    return Promise.all((data ?? []).map(async (proof): Promise<DeliveryProof> => { const { data: signed, error: signedError } = await client.storage.from("delivery-proofs").createSignedUrl(proof.storage_path, 900); if (signedError || !signed?.signedUrl) throw signedError ?? new Error("Could not open delivery proof."); return { id: proof.id, orderId: proof.order_id, fileName: proof.file_name, url: signed.signedUrl }; }));
   },
   async listRiders() {
     const client = requireClient();
