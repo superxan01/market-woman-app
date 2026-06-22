@@ -1,4 +1,4 @@
-export const roles = ["admin", "vendor", "rider", "customer"] as const;
+export const roles = ["super_admin", "support_rep", "vendor", "rider", "customer"] as const;
 export type UserRole = (typeof roles)[number];
 export const isUserRole = (value: string): value is UserRole => roles.includes(value as UserRole);
 
