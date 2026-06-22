@@ -1,18 +1,116 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { orderRepository } from "@/lib/repositories";
 import { statusLabel } from "@/lib/order-state";
 import { supabase } from "@/lib/supabase";
-import type { Order, Rider, UserRole } from "@/lib/types";
+import type { Order, Rider, TeamMember, UserRole } from "@/lib/types";
+
+type OperationsTab = "orders" | "vendors" | "riders" | "team";
+const roleLabel = (role: UserRole) => role.replaceAll("_", " ");
+const orderReference = (id: string) => id.startsWith("MW-") ? id : `MW-${id.slice(0, 8).toUpperCase()}`;
 
 export function Dashboard({ role }: { role: UserRole }) {
-  const [orders, setOrders] = useState<Order[]>([]); const [riders, setRiders] = useState<Rider[]>([]); const [items, setItems] = useState(""); const [area, setArea] = useState(""); const [note, setNote] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
   const isOperations = role === "super_admin" || role === "support_rep";
-  const load = async () => { try { setOrders(await orderRepository.listOrders()); if (isOperations) setRiders(await orderRepository.listRiders()); } catch (error) { setMessage(error instanceof Error ? error.message : "Could not load orders."); } };
-  useEffect(() => { load(); }, [role]);
-  const createOrder = async (event: FormEvent) => { event.preventDefault(); const lines = items.split("\n").map((item) => item.trim()).filter(Boolean); if (!lines.length || !area.trim()) { setMessage("Add at least one item and your delivery area."); return; } setBusy(true); try { await orderRepository.createOrder({ customerName: "", customerPhone: "", items: lines, area, note }); setItems(""); setArea(""); setNote(""); setMessage("Your market request has been sent."); await load(); } catch (error) { setMessage(error instanceof Error ? error.message : "Could not create order."); } finally { setBusy(false); } };
-  const assign = async (orderId: string, riderId: string) => { if (!riderId) return; setBusy(true); try { await orderRepository.assignRider(orderId, riderId); setMessage("Rider assigned successfully."); await load(); } catch (error) { setMessage(error instanceof Error ? error.message : "Could not assign rider."); } finally { setBusy(false); } };
+  const [activeTab, setActiveTab] = useState<OperationsTab>("orders");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [riders, setRiders] = useState<Rider[]>([]);
+  const [vendors, setVendors] = useState<Rider[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [items, setItems] = useState("");
+  const [area, setArea] = useState("");
+  const [note, setNote] = useState("");
+  const [quoteValues, setQuoteValues] = useState<Record<string, { amount: string; note: string }>>({});
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [loadedOrders, loadedRiders, loadedVendors] = await Promise.all([
+        orderRepository.listOrders(),
+        isOperations ? orderRepository.listRiders() : Promise.resolve([]),
+        isOperations ? orderRepository.listVendors() : Promise.resolve([])
+      ]);
+      setOrders(loadedOrders);
+      setRiders(loadedRiders);
+      setVendors(loadedVendors);
+      if (isOperations && activeTab === "team") setTeam(await orderRepository.listTeamMembers());
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load the marketplace data.");
+    }
+  }, [activeTab, isOperations]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const run = async (work: () => Promise<void>, success: string) => {
+    setBusy(true);
+    try { await work(); setMessage(success); await load(); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "That update could not be saved."); }
+    finally { setBusy(false); }
+  };
+
+  const createOrder = async (event: FormEvent) => {
+    event.preventDefault();
+    const lines = items.split("\n").map((item) => item.trim()).filter(Boolean);
+    if (!lines.length || !area.trim()) { setMessage("Add at least one item and your delivery area."); return; }
+    await run(async () => {
+      await orderRepository.createOrder({ customerName: "", customerPhone: "", items: lines, area, note });
+      setItems(""); setArea(""); setNote("");
+    }, "Your market request has been sent.");
+  };
+
+  const submitQuote = async (event: FormEvent, orderId: string) => {
+    event.preventDefault();
+    const quote = quoteValues[orderId];
+    const amount = Number(quote?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) { setMessage("Enter a valid quote amount."); return; }
+    await run(async () => {
+      await orderRepository.createQuote({ orderId, amount, note: quote?.note });
+      setQuoteValues((current) => ({ ...current, [orderId]: { amount: "", note: "" } }));
+    }, "Quote submitted for review.");
+  };
+
   const signOut = async () => { await supabase?.auth.signOut(); location.href = "/login"; };
-  return <main className="app-shell"><aside className="sidebar"><a className="brand" href={`/${role}`}><span>m</span> market<br />woman</a><p className="sidebar-label">{role.toUpperCase()} WORKSPACE</p>{isOperations && <><button className="nav-link selected">Order queue</button><button className="nav-link">Vendors</button><button className="nav-link">Riders</button><button className="nav-link">Support team</button></>}<div className="profile"><span>{role[0].toUpperCase()}</span><div><strong>{role.replace('_', ' ')}</strong><small>authenticated</small></div></div></aside><section className="content"><header className="topbar"><div><p className="eyebrow">LIVE DATABASE</p><h1>{isOperations ? "Marketplace control" : role === "customer" ? "Your market list" : "Your workspace"}</h1><p>{isOperations ? "Review requests, assign vendors and riders, and track every delivery." : role === "customer" ? "Create an order and track it from request to delivery." : "Your profile is ready; this workflow is coming next."}</p></div><button className="outline" onClick={signOut}>Sign out</button></header>{message && <div className="toast">{message}<button onClick={() => setMessage("")}>×</button></div>}{role === "customer" && <section className="order-form-card"><div><p className="eyebrow">NEW ORDER</p><h2>What should we get?</h2><p>One item per line works best. A market woman will review your request before shopping.</p></div><form onSubmit={createOrder} className="order-form"><label>Shopping list<textarea value={items} onChange={(e) => setItems(e.target.value)} placeholder={'Tomatoes × 2 baskets\nRice 5kg\nFresh pepper'} required /></label><label>Delivery area<input value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Yaba" required /></label><label>Notes (optional)<input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Preferred substitutions or delivery note" /></label><button className="primary" disabled={busy}>Send market request →</button></form></section>}<section className="orders-section"><div className="section-heading"><div><p className="eyebrow">{isOperations ? "INCOMING ORDERS" : "ORDER HISTORY"}</p><h2>{isOperations ? "Orders needing attention" : "Your requests"}</h2></div><span className="count">{orders.length} items</span></div><div className="order-grid">{orders.map((order) => <article className="order-card" key={order.id}><div className="card-top"><span className={`status ${order.status}`}>{statusLabel(order.status)}</span><small>{order.id}</small></div><h3>{isOperations ? order.customerName : order.area}</h3><p className="area">⌖ {order.area} · {order.createdAt}</p><ul>{order.items.map((item) => <li key={item}>{item}</li>)}</ul>{order.note && <p className="note">“{order.note}”</p>}{isOperations && order.status === "confirmed" && <label className="assign">Assign rider<select defaultValue="" onChange={(e) => assign(order.id, e.target.value)} disabled={busy}><option value="" disabled>Select rider</option>{riders.map((rider) => <option key={rider.id} value={rider.id}>{rider.fullName}</option>)}</select></label>}{isOperations && order.status === "confirmed" && !riders.length && <p className="note">Create a rider account before assignment.</p>}</article>)}</div>{!orders.length && <div className="empty">No live orders yet. {role === "customer" ? "Create your first market request above." : "Orders will appear here as customers submit them."}</div>}</section></section></main>;
+  const nav = (tab: OperationsTab, label: string) => <button className={`nav-link ${activeTab === tab ? "selected" : ""}`} onClick={() => setActiveTab(tab)}>{label}</button>;
+  const hasRoleEditor = role === "super_admin";
+
+  return <main className="app-shell">
+    <aside className="sidebar">
+      <a className="brand" href={`/${role}`}><span>m</span> market<br />woman</a>
+      <p className="sidebar-label">{roleLabel(role).toUpperCase()} WORKSPACE</p>
+      {isOperations && <>{nav("orders", "Order queue")}{nav("vendors", "Vendors")}{nav("riders", "Riders")}{nav("team", "Support team")}</>}
+      <div className="profile"><span>{role[0].toUpperCase()}</span><div><strong>{roleLabel(role)}</strong><small>authenticated</small></div></div>
+    </aside>
+    <section className="content">
+      <header className="topbar"><div><p className="eyebrow">LIVE DATABASE</p><h1>{isOperations ? activeTab === "orders" ? "Marketplace control" : activeTab === "vendors" ? "Vendor network" : activeTab === "riders" ? "Rider network" : "Operations team" : role === "customer" ? "Your market list" : role === "vendor" ? "Vendor requests" : "Delivery run"}</h1><p>{isOperations ? "Assign marketplace work and keep every delivery moving." : role === "customer" ? "Create an order and track it from request to delivery." : role === "vendor" ? "Review assigned requests and send a quote." : "Update the delivery once you pick up and complete an order."}</p></div><button className="outline" onClick={signOut}>Sign out</button></header>
+      {message && <div className="toast">{message}<button onClick={() => setMessage("")}>×</button></div>}
+
+      {role === "customer" && <section className="order-form-card"><div><p className="eyebrow">NEW ORDER</p><h2>What should we get?</h2><p>One item per line works best. A market woman will review your request before shopping.</p></div><form onSubmit={createOrder} className="order-form"><label>Shopping list<textarea value={items} onChange={(e) => setItems(e.target.value)} placeholder={"Tomatoes × 2 baskets\nRice 5kg\nFresh pepper"} required /></label><label>Delivery area<input value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Yaba" required /></label><label>Notes (optional)<input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Preferred substitutions or delivery note" /></label><button className="primary" disabled={busy}>Send market request →</button></form></section>}
+
+      {isOperations && activeTab === "vendors" && <Roster title="Vendors" description="Assign new customer requests to a vendor so they can quote." people={vendors} empty="No vendors are registered yet. Promote an existing account from Support team." />}
+      {isOperations && activeTab === "riders" && <Roster title="Riders" description="Riders become available for assignment once their account is promoted." people={riders} empty="No riders are registered yet. Promote an existing account from Support team." />}
+      {isOperations && activeTab === "team" && <TeamPanel team={team} canEdit={hasRoleEditor} busy={busy} onRoleChange={(id, nextRole) => run(async () => { await orderRepository.updateProfileRole(id, nextRole); }, "Role updated successfully.")} />}
+
+      {(!isOperations || activeTab === "orders") && <section className="orders-section"><div className="section-heading"><div><p className="eyebrow">{isOperations ? "INCOMING ORDERS" : role === "vendor" ? "ASSIGNED REQUESTS" : role === "rider" ? "ACTIVE DELIVERIES" : "ORDER HISTORY"}</p><h2>{isOperations ? "Orders needing attention" : role === "vendor" ? "Requests to quote" : role === "rider" ? "Deliveries in your care" : "Your requests"}</h2></div><span className="count">{orders.length} items</span></div><div className="order-grid">{orders.map((order) => <OrderCard key={order.id} order={order} role={role} riders={riders} vendors={vendors} busy={busy} quote={quoteValues[order.id] ?? { amount: "", note: "" }} onQuoteChange={(value) => setQuoteValues((current) => ({ ...current, [order.id]: { ...current[order.id], ...value } }))} onQuote={(event) => submitQuote(event, order.id)} onVendor={(vendorId) => run(async () => { await orderRepository.assignVendor(order.id, vendorId); }, "Vendor assigned successfully.")} onRider={(riderId) => run(async () => { await orderRepository.assignRider(order.id, riderId); }, "Rider assigned successfully.")} onStatus={(status) => run(async () => { await orderRepository.updateStatus(order.id, status); }, `Order marked ${statusLabel(status).toLowerCase()}.`)} />)}</div>{!orders.length && <div className="empty">No live orders yet. {role === "customer" ? "Create your first market request above." : role === "vendor" ? "Orders assigned to you will appear here." : role === "rider" ? "Assigned deliveries will appear here." : "Orders will appear here as customers submit them."}</div>}</section>}
+    </section>
+  </main>;
+}
+
+function OrderCard({ order, role, riders, vendors, busy, quote, onQuoteChange, onQuote, onVendor, onRider, onStatus }: { order: Order; role: UserRole; riders: Rider[]; vendors: Rider[]; busy: boolean; quote: { amount: string; note: string }; onQuoteChange: (value: Partial<{ amount: string; note: string }>) => void; onQuote: (event: FormEvent) => void; onVendor: (id: string) => void; onRider: (id: string) => void; onStatus: (status: "picked_up" | "delivered") => void }) {
+  const isOperations = role === "super_admin" || role === "support_rep";
+  return <article className="order-card"><div className="card-top"><span className={`status ${order.status}`}>{statusLabel(order.status)}</span><small>{orderReference(order.id)}</small></div><h3>{isOperations ? order.customerName : order.area}</h3><p className="area">⌖ {order.area} · {order.createdAt}</p><ul>{order.items.map((item) => <li key={item}>{item}</li>)}</ul>{order.vendor && <p className="assignment">Vendor: <strong>{order.vendor}</strong></p>}{order.rider && <p className="assignment">Rider: <strong>{order.rider}</strong></p>}{order.note && <p className="note">“{order.note}”</p>}
+    {isOperations && order.status === "requested" && <label className="assign">Assign vendor<select value={order.vendorId ?? ""} onChange={(e) => onVendor(e.target.value)} disabled={busy}><option value="" disabled>Select vendor</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.fullName}</option>)}</select></label>}
+    {isOperations && order.status === "confirmed" && <label className="assign">Assign rider<select defaultValue="" onChange={(e) => onRider(e.target.value)} disabled={busy}><option value="" disabled>Select rider</option>{riders.map((rider) => <option key={rider.id} value={rider.id}>{rider.fullName}</option>)}</select></label>}
+    {role === "vendor" && order.status === "requested" && <form className="quote-form" onSubmit={onQuote}><label>Quote (₦)<input type="number" min="1" value={quote.amount} onChange={(e) => onQuoteChange({ amount: e.target.value })} required /></label><label>Note<input value={quote.note} onChange={(e) => onQuoteChange({ note: e.target.value })} placeholder="Availability or substitutions" /></label><button className="primary" disabled={busy}>Submit quote</button></form>}
+    {role === "rider" && order.status === "assigned" && <button className="primary mini" disabled={busy} onClick={() => onStatus("picked_up")}>Mark picked up</button>}
+    {role === "rider" && order.status === "picked_up" && <button className="primary mini" disabled={busy} onClick={() => onStatus("delivered")}>Mark delivered</button>}
+  </article>;
+}
+
+function Roster({ title, description, people, empty }: { title: string; description: string; people: Rider[]; empty: string }) {
+  return <section className="roster"><p className="eyebrow">NETWORK</p><h2>{title}</h2><p>{description}</p><div className="roster-grid">{people.map((person) => <article key={person.id}><span>{person.fullName[0]}</span><strong>{person.fullName}</strong><small>Available for assignment</small></article>)}</div>{!people.length && <div className="empty">{empty}</div>}</section>;
+}
+
+function TeamPanel({ team, canEdit, busy, onRoleChange }: { team: TeamMember[]; canEdit: boolean; busy: boolean; onRoleChange: (id: string, role: UserRole) => void }) {
+  return <section className="team-panel"><p className="eyebrow">ACCESS MANAGEMENT</p><h2>People and permissions</h2><p>{canEdit ? "Accounts begin as customers after sign-up. Promote an existing account to vendor, rider, or support rep here." : "Support reps can view the operational roster but cannot change user permissions."}</p><div className="team-table">{team.map((member) => <article key={member.id}><div><strong>{member.fullName}</strong><small>{member.phone ?? "No phone recorded"} · Joined {member.createdAt}</small></div>{canEdit ? <select value={member.role} disabled={busy} onChange={(e) => onRoleChange(member.id, e.target.value as UserRole)}><option value="customer">Customer</option><option value="vendor">Vendor</option><option value="rider">Rider</option><option value="support_rep">Support rep</option><option value="super_admin">Super admin</option></select> : <span className="role-pill">{roleLabel(member.role)}</span>}</article>)}</div>{!team.length && <div className="empty">No user profiles are available yet.</div>}</section>;
 }
