@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { CreateOrderInput, DeliveryProof, Order, OrderAttachment, OrderRepository, OrderStatus, Quote, Rider, TeamMember, UserRole } from "./types";
+import type { CreateOrderInput, DeliveryProof, Order, OrderAttachment, OrderFeedbackSummary, OrderRepository, OrderStatus, Quote, Rider, TeamMember, UserRole } from "./types";
 
 type OrderRow = {
   id: string; status: OrderStatus; area: string; shopping_list: unknown; note: string | null;
@@ -113,6 +113,10 @@ export const supabaseOrderRepository: OrderRepository = {
   async listDeliveryProofs() {
     const client = requireClient(); const { data, error } = await client.from("delivery_proofs").select("id,order_id,storage_path,file_name"); if (error) throw error;
     return Promise.all((data ?? []).map(async (proof): Promise<DeliveryProof> => { const { data: signed, error: signedError } = await client.storage.from("delivery-proofs").createSignedUrl(proof.storage_path, 900); if (signedError || !signed?.signedUrl) throw signedError ?? new Error("Could not open delivery proof."); return { id: proof.id, orderId: proof.order_id, fileName: proof.file_name, url: signed.signedUrl }; }));
+  },
+  async listOrderFeedback() {
+    const client = requireClient(); const { data, error } = await client.from("order_feedback").select("order_id,rating,comment"); if (error) throw error;
+    return (data ?? []).map((item): OrderFeedbackSummary => ({ orderId: item.order_id, rating: item.rating, comment: item.comment ?? undefined }));
   },
   async listRiders() {
     const client = requireClient();

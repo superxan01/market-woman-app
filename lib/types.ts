@@ -12,6 +12,7 @@ export type TeamMember = { id: string; fullName: string; phone?: string; role: U
 export type OrderAttachment = { id: string; orderId: string; fileName: string; url: string };
 export type OrderFeedback = { orderId: string; rating: number; comment?: string };
 export type DeliveryProof = { id: string; orderId: string; fileName: string; url: string };
+export type OrderFeedbackSummary = { orderId: string; rating: number; comment?: string };
 export type CreateOrderInput = { customerName: string; customerPhone: string; items: string[]; area: string; note?: string };
 export type OrderRepository = {
   listOrders(): Promise<Order[]>;
@@ -24,6 +25,7 @@ export type OrderRepository = {
   submitOrderFeedback(input: OrderFeedback): Promise<void>;
   uploadDeliveryProof(orderId: string, file: File): Promise<void>;
   listDeliveryProofs(): Promise<DeliveryProof[]>;
+  listOrderFeedback(): Promise<OrderFeedbackSummary[]>;
   listRiders(): Promise<Rider[]>;
   listVendors(): Promise<Rider[]>;
   assignRider(id: string, riderId: string): Promise<Order>;

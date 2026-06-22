@@ -28,6 +28,7 @@ export const mockOrderRepository: OrderRepository = {
   async submitOrderFeedback() { return; },
   async uploadDeliveryProof() { return; },
   async listDeliveryProofs() { return []; },
+  async listOrderFeedback() { return []; },
   async listRiders() { return [{ id: "seyi-a", fullName: "Seyi A." }]; },
   async listVendors() { return [{ id: "mama-chidinma", fullName: "Mama Chidinma" }]; },
   async assignRider(id, riderId) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (order.status !== "confirmed") throw new Error("Only confirmed orders can be assigned"); order.rider = riderId === "seyi-a" ? "Seyi A." : "Assigned rider"; order.status = "assigned"; return copy(order); },
