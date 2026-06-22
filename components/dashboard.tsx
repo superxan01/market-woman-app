@@ -33,22 +33,20 @@ export function Dashboard({ role }: { role: UserRole }) {
 
   const load = useCallback(async () => {
     try {
-      const [loadedOrders, loadedRiders, loadedVendors, loadedQuotes, loadedAttachments, loadedProofs, loadedFeedback] = await Promise.all([
+      const [loadedOrders, loadedRiders, loadedVendors, loadedQuotes] = await Promise.all([
         orderRepository.listOrders(),
         isOperations ? orderRepository.listRiders() : Promise.resolve([]),
         isOperations ? orderRepository.listVendors() : Promise.resolve([]),
-        role === "customer" ? Promise.resolve([]) : orderRepository.listQuotes(),
-        orderRepository.listOrderAttachments(),
-        orderRepository.listDeliveryProofs(),
-        orderRepository.listOrderFeedback()
+        role === "customer" ? Promise.resolve([]) : orderRepository.listQuotes()
       ]);
       setOrders(loadedOrders);
       setRiders(loadedRiders);
       setVendors(loadedVendors);
       setQuotes(loadedQuotes);
-      setAttachments(loadedAttachments);
-      setProofs(loadedProofs);
-      setFeedback(loadedFeedback);
+      const optionalData = await Promise.allSettled([orderRepository.listOrderAttachments(), orderRepository.listDeliveryProofs(), orderRepository.listOrderFeedback()]);
+      if (optionalData[0].status === "fulfilled") setAttachments(optionalData[0].value);
+      if (optionalData[1].status === "fulfilled") setProofs(optionalData[1].value);
+      if (optionalData[2].status === "fulfilled") setFeedback(optionalData[2].value);
       if (isOperations && activeTab === "team") setTeam(await orderRepository.listTeamMembers());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load the marketplace data.");
