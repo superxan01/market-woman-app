@@ -1,31 +1,50 @@
 # Market Woman App
 
-A responsive marketplace MVP for Nigerian customers, vendors, riders, and administrators. The current build uses a mock repository so the complete role-aware workflow can be reviewed before a backend is connected.
+Responsive marketplace workflow for Nigerian customers, vendors, riders, support reps, and super-admins.
 
-## Run locally
+## Live workflow
 
-1. Install Node.js 20+.
-2. Run `npm install`.
-3. Run `npm run dev` and open `http://localhost:3000`.
-4. Run `npm run test` and `npm run build` before release.
+1. Customer signs up, creates an order, and can attach a shopping-list image.
+2. Operations assigns a vendor; the vendor submits a quote.
+3. Operations accepts a quote, assigns a rider, and follows delivery progress.
+4. Rider uploads delivery proof, marks pickup and delivery in sequence.
+5. Customer views tracking, delivery proof, and leaves a rating.
+6. Operations reviews delivery feedback in the Service feedback workspace.
 
-## Current MVP
+## Roles
 
-- Demo role selection and client-side role guards
-- Admin order overview, status progression, and rider assignment
-- Vendor request view, rider delivery view, and customer tracking view
-- Typed order lifecycle with mock data
-- Supabase-ready repository boundary and initial SQL migration
+- `super_admin`: full operational and access-management control.
+- `support_rep`: reads marketplace records and assigns vendors/riders; cannot manage account roles.
+- `vendor`: sees assigned requests and submits quotes.
+- `rider`: sees assigned deliveries, uploads proof, and progresses delivery status.
+- `customer`: creates, tracks, cancels unprocessed orders, and rates delivered orders.
 
-## Supabase handoff
+## Local development
 
-Create a Supabase project, copy `.env.example` to `.env.local`, add its URL and anon key, then apply `supabase/migrations/0001_initial_schema.sql`. Implement the Supabase repository in `lib/repositories.ts` and replace the mock export only after the migration and RLS policies are verified.
+1. Install Node.js 20 or newer.
+2. Create `.env.local` with:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   ```
+3. Run `npm install` and `npm run dev`.
+4. Before release, run `npm run test` and `npm run build`.
 
-## Vercel deployment
+## Supabase
 
-1. Create a GitHub repository and push this project.
-2. Import it in Vercel as a Next.js project.
-3. Vercel creates preview deployments for pull requests and deploys the production site from `main`.
-4. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel for both Preview and Production before enabling the real Supabase repository.
+Apply the SQL migrations in numerical order from `supabase/migrations/`. They create the role model, row-level-security policies, private attachment/proof buckets, controlled delivery actions, cancellations, and feedback.
 
-No secrets are committed to the repository.
+Do not commit database credentials or service-role keys. The browser-safe public URL/key are the only values required by this Next.js client.
+
+## Deployment
+
+Vercel deploys the `main` branch to production and creates previews for pull requests. Configure the two public Supabase variables in both Preview and Production environments.
+
+## Production acceptance checklist
+
+- Customer can create, track, and cancel an unprocessed order.
+- Operations can see all incoming orders, accept a quote, and assign a rider.
+- Vendor can quote assigned work only.
+- Rider can upload proof and move only `assigned → picked_up → delivered`.
+- Customer can open delivery proof and submit feedback only after delivery.
+- Super-admin can manage roles; support reps cannot.
