@@ -21,6 +21,7 @@ export type OrderRepository = {
   assignVendor(id: string, vendorId: string): Promise<Order>;
   listQuotes(orderId?: string): Promise<Quote[]>;
   createQuote(input: { orderId: string; amount: number; note?: string }): Promise<Quote>;
+  acceptQuote(quoteId: string): Promise<Order>;
   listTeamMembers(): Promise<TeamMember[]>;
   updateProfileRole(id: string, role: UserRole): Promise<TeamMember>;
 };

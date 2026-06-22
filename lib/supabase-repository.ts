@@ -98,6 +98,14 @@ export const supabaseOrderRepository: OrderRepository = {
     const vendor = Array.isArray(data.vendor) ? data.vendor[0] : data.vendor;
     return { id: data.id, orderId: data.order_id, amount: data.amount, note: data.note ?? "", status: data.status, vendor: vendor?.full_name ?? "Vendor" };
   },
+  async acceptQuote(quoteId) {
+    const client = requireClient();
+    const { data, error } = await client.rpc("accept_vendor_quote", { quote_id: quoteId });
+    if (error) throw error;
+    const order = await supabaseOrderRepository.getOrder(data as string);
+    if (!order) throw new Error("The accepted order could not be loaded.");
+    return order;
+  },
   async listTeamMembers() {
     const client = requireClient();
     const { data, error } = await client.from("profiles").select("id,full_name,phone,role,created_at").order("created_at", { ascending: false });

@@ -28,6 +28,7 @@ export const mockOrderRepository: OrderRepository = {
   async assignVendor(id, vendorId) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); order.vendor = vendorId === "mama-chidinma" ? "Mama Chidinma" : "Assigned vendor"; order.vendorId = vendorId; return copy(order); },
   async listQuotes(orderId) { return copy(orderId ? quotes.filter((quote) => quote.orderId === orderId) : quotes); },
   async createQuote({ orderId, amount, note }) { const quote: Quote = { id: `QT-${103 + quotes.length}`, orderId, amount, note: note ?? "", status: "pending", vendor: "Mama Chidinma" }; quotes.push(quote); return copy(quote); },
+  async acceptQuote(quoteId) { const quote = quotes.find((item) => item.id === quoteId); if (!quote) throw new Error("Quote not found"); quotes.filter((item) => item.orderId === quote.orderId).forEach((item) => { item.status = item.id === quoteId ? "accepted" : "declined"; }); const order = orders.find((item) => item.id === quote.orderId); if (!order) throw new Error("Order not found"); order.status = "confirmed"; order.total = quote.amount; order.vendor = quote.vendor; return copy(order); },
   async listTeamMembers() { return copy(team); },
   async updateProfileRole(id, role) { const member = team.find((item) => item.id === id); if (!member) throw new Error("User not found"); member.role = role as UserRole; return copy(member); }
 };
