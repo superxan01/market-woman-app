@@ -16,7 +16,7 @@ export default function LoginPage() {
     event.preventDefault(); if (!supabase) { setMessage("Supabase is not configured."); return; }
     setBusy(true); setMessage("");
     if (mode === "sign-up") {
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, phone } } });
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin, data: { full_name: fullName, phone } } });
       if (error) setMessage(error.message);
       else if (!data.session) setMessage("Check your email to confirm your account, then sign in.");
       else router.push("/customer");
