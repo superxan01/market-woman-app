@@ -51,6 +51,20 @@ export const supabaseOrderRepository: OrderRepository = {
     if (error) throw error;
     return mapOrder(data as unknown as OrderRow);
   },
+  async uploadOrderAttachment(orderId, file) {
+    const client = requireClient();
+    const { data: session } = await client.auth.getUser();
+    if (!session.user) throw new Error("Sign in is required before adding an attachment.");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const storagePath = `${session.user.id}/${orderId}/${crypto.randomUUID()}-${safeName}`;
+    const { error: uploadError } = await client.storage.from("order-attachments").upload(storagePath, file, { contentType: file.type, upsert: false });
+    if (uploadError) throw uploadError;
+    const { error: recordError } = await client.from("order_attachments").insert({ order_id: orderId, storage_path: storagePath, file_name: file.name, mime_type: file.type || "application/octet-stream" });
+    if (recordError) {
+      await client.storage.from("order-attachments").remove([storagePath]);
+      throw recordError;
+    }
+  },
   async updateStatus(id, status) {
     const client = requireClient();
     if (status === "picked_up" || status === "delivered") {

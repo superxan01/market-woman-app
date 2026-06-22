@@ -14,6 +14,7 @@ export type OrderRepository = {
   listOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   createOrder(input: CreateOrderInput): Promise<Order>;
+  uploadOrderAttachment(orderId: string, file: File): Promise<void>;
   updateStatus(id: string, status: OrderStatus): Promise<Order>;
   listRiders(): Promise<Rider[]>;
   listVendors(): Promise<Rider[]>;

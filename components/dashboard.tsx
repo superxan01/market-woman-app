@@ -21,6 +21,7 @@ export function Dashboard({ role }: { role: UserRole }) {
   const [items, setItems] = useState("");
   const [area, setArea] = useState("");
   const [note, setNote] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [quoteValues, setQuoteValues] = useState<Record<string, { amount: string; note: string }>>({});
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,9 +58,10 @@ export function Dashboard({ role }: { role: UserRole }) {
     const lines = items.split("\n").map((item) => item.trim()).filter(Boolean);
     if (!lines.length || !area.trim()) { setMessage("Add at least one item and your delivery area."); return; }
     await run(async () => {
-      await orderRepository.createOrder({ customerName: "", customerPhone: "", items: lines, area, note });
-      setItems(""); setArea(""); setNote("");
-    }, "Your market request has been sent.");
+      const order = await orderRepository.createOrder({ customerName: "", customerPhone: "", items: lines, area, note });
+      if (attachment) await orderRepository.uploadOrderAttachment(order.id, attachment);
+      setItems(""); setArea(""); setNote(""); setAttachment(null);
+    }, attachment ? "Your market request and image attachment have been sent." : "Your market request has been sent.");
   };
 
   const submitQuote = async (event: FormEvent, orderId: string) => {
@@ -88,7 +90,7 @@ export function Dashboard({ role }: { role: UserRole }) {
       <header className="topbar"><div><p className="eyebrow">LIVE DATABASE</p><h1>{isOperations ? activeTab === "orders" ? "Marketplace control" : activeTab === "vendors" ? "Vendor network" : activeTab === "riders" ? "Rider network" : "Operations team" : role === "customer" ? "Your market list" : role === "vendor" ? "Vendor requests" : "Delivery run"}</h1><p>{isOperations ? "Assign marketplace work and keep every delivery moving." : role === "customer" ? "Create an order and track it from request to delivery." : role === "vendor" ? "Review assigned requests and send a quote." : "Update the delivery once you pick up and complete an order."}</p></div><button className="outline" onClick={signOut}>Sign out</button></header>
       {message && <div className="toast">{message}<button onClick={() => setMessage("")}>×</button></div>}
 
-      {role === "customer" && <section className="order-form-card"><div><p className="eyebrow">NEW ORDER</p><h2>What should we get?</h2><p>One item per line works best. A market woman will review your request before shopping.</p></div><form onSubmit={createOrder} className="order-form"><label>Shopping list<textarea value={items} onChange={(e) => setItems(e.target.value)} placeholder={"Tomatoes × 2 baskets\nRice 5kg\nFresh pepper"} required /></label><label>Delivery area<input value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Yaba" required /></label><label>Notes (optional)<input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Preferred substitutions or delivery note" /></label><button className="primary" disabled={busy}>Send market request →</button></form></section>}
+      {role === "customer" && <section className="order-form-card"><div><p className="eyebrow">NEW ORDER</p><h2>What should we get?</h2><p>One item per line works best. A market woman will review your request before shopping.</p></div><form onSubmit={createOrder} className="order-form"><label>Shopping list<textarea value={items} onChange={(e) => setItems(e.target.value)} placeholder={"Tomatoes × 2 baskets\nRice 5kg\nFresh pepper"} required /></label><label>Delivery area<input value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Yaba" required /></label><label>Notes (optional)<input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Preferred substitutions or delivery note" /></label><label>Shopping-list image (optional)<input type="file" accept="image/*" onChange={(e) => setAttachment(e.target.files?.[0] ?? null)} /><small>{attachment ? attachment.name : "Attach a clear photo of a handwritten list or reference item."}</small></label><button className="primary" disabled={busy}>Send market request →</button></form></section>}
 
       {isOperations && activeTab === "vendors" && <Roster title="Vendors" description="Assign new customer requests to a vendor so they can quote." people={vendors} empty="No vendors are registered yet. Promote an existing account from Support team." />}
       {isOperations && activeTab === "riders" && <Roster title="Riders" description="Riders become available for assignment once their account is promoted." people={riders} empty="No riders are registered yet. Promote an existing account from Support team." />}
