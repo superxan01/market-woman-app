@@ -24,6 +24,8 @@ export const mockOrderRepository: OrderRepository = {
   async uploadOrderAttachment() { return; },
   async listOrderAttachments() { return []; },
   async updateStatus(id, status) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (!canTransition(order.status, status)) throw new Error(`Cannot move ${order.id} from ${order.status} to ${status}`); order.status = status; return copy(order); },
+  async cancelOrder(id) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (order.status === "delivered" || order.status === "cancelled") throw new Error("This order can no longer be cancelled"); order.status = "cancelled"; return copy(order); },
+  async submitOrderFeedback() { return; },
   async listRiders() { return [{ id: "seyi-a", fullName: "Seyi A." }]; },
   async listVendors() { return [{ id: "mama-chidinma", fullName: "Mama Chidinma" }]; },
   async assignRider(id, riderId) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (order.status !== "confirmed") throw new Error("Only confirmed orders can be assigned"); order.rider = riderId === "seyi-a" ? "Seyi A." : "Assigned rider"; order.status = "assigned"; return copy(order); },

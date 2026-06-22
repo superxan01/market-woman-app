@@ -89,6 +89,21 @@ export const supabaseOrderRepository: OrderRepository = {
     if (error) throw error;
     return mapOrder(data as unknown as OrderRow);
   },
+  async cancelOrder(id) {
+    const client = requireClient();
+    const { data, error } = await client.rpc("cancel_market_order", { order_id: id });
+    if (error) throw error;
+    const order = await supabaseOrderRepository.getOrder(data as string);
+    if (!order) throw new Error("The cancelled order could not be loaded.");
+    return order;
+  },
+  async submitOrderFeedback({ orderId, rating, comment }) {
+    const client = requireClient();
+    const { data: session } = await client.auth.getUser();
+    if (!session.user) throw new Error("Sign in is required before leaving a rating.");
+    const { error } = await client.from("order_feedback").upsert({ order_id: orderId, customer_id: session.user.id, rating, comment: comment || null }, { onConflict: "order_id,customer_id" });
+    if (error) throw error;
+  },
   async listRiders() {
     const client = requireClient();
     const { data, error } = await client.from("profiles").select("id,full_name").eq("role", "rider").order("full_name");
