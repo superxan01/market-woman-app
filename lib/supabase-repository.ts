@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { CreateOrderInput, Order, OrderRepository, OrderStatus, Quote } from "./types";
+import type { CreateOrderInput, Order, OrderRepository, OrderStatus, Quote, Rider } from "./types";
 
 type OrderRow = {
   id: string; status: OrderStatus; area: string; shopping_list: unknown; note: string | null;
@@ -55,8 +55,17 @@ export const supabaseOrderRepository: OrderRepository = {
     if (error) throw error;
     return mapOrder(data as unknown as OrderRow);
   },
-  async assignRider(id, rider) {
-    throw new Error(`Rider assignment for ${id} requires an authenticated admin profile. Real admin controls are the next workflow step.`);
+  async listRiders() {
+    const client = requireClient();
+    const { data, error } = await client.from("profiles").select("id,full_name").eq("role", "rider").order("full_name");
+    if (error) throw error;
+    return (data ?? []).map((rider): Rider => ({ id: rider.id, fullName: rider.full_name }));
+  },
+  async assignRider(id, riderId) {
+    const client = requireClient();
+    const { data, error } = await client.from("orders").update({ rider_id: riderId, status: "assigned" }).eq("id", id).select("id,status,area,shopping_list,note,total,created_at,customer:profiles!orders_customer_id_fkey(full_name,phone),vendor:profiles!orders_vendor_id_fkey(full_name),rider:profiles!orders_rider_id_fkey(full_name)").single();
+    if (error) throw error;
+    return mapOrder(data as unknown as OrderRow);
   },
   async listQuotes(orderId) {
     const client = requireClient();

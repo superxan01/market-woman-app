@@ -17,6 +17,7 @@ export const mockOrderRepository: OrderRepository = {
   async getOrder(id) { const order = orders.find((item) => item.id === id); return order ? copy(order) : undefined; },
   async createOrder(input: CreateOrderInput) { const order: Order = { id: `MW-${2050 + orders.length}`, ...input, status: "requested", createdAt: "Just now" }; orders = [order, ...orders]; return copy(order); },
   async updateStatus(id, status) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (!canTransition(order.status, status)) throw new Error(`Cannot move ${order.id} from ${order.status} to ${status}`); order.status = status; return copy(order); },
-  async assignRider(id, rider) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (order.status !== "confirmed") throw new Error("Only confirmed orders can be assigned"); order.rider = rider; order.status = "assigned"; return copy(order); },
+  async listRiders() { return [{ id: "seyi-a", fullName: "Seyi A." }]; },
+  async assignRider(id, riderId) { const order = orders.find((item) => item.id === id); if (!order) throw new Error("Order not found"); if (order.status !== "confirmed") throw new Error("Only confirmed orders can be assigned"); order.rider = riderId === "seyi-a" ? "Seyi A." : "Assigned rider"; order.status = "assigned"; return copy(order); },
   async listQuotes(orderId) { return copy(orderId ? quotes.filter((quote) => quote.orderId === orderId) : quotes); }
 };
