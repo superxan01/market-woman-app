@@ -53,6 +53,13 @@ export const supabaseOrderRepository: OrderRepository = {
   },
   async updateStatus(id, status) {
     const client = requireClient();
+    if (status === "picked_up" || status === "delivered") {
+      const { data, error } = await client.rpc("update_delivery_status", { next_status: status, order_id: id });
+      if (error) throw error;
+      const order = await supabaseOrderRepository.getOrder(data as string);
+      if (!order) throw new Error("The delivery update could not be loaded.");
+      return order;
+    }
     const { data, error } = await client.from("orders").update({ status }).eq("id", id).select("id,status,area,shopping_list,note,total,vendor_id,rider_id,created_at,customer:profiles!orders_customer_id_fkey(full_name,phone),vendor:profiles!orders_vendor_id_fkey(full_name),rider:profiles!orders_rider_id_fkey(full_name)").single();
     if (error) throw error;
     return mapOrder(data as unknown as OrderRow);
