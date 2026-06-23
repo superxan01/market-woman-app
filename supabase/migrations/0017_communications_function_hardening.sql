@@ -1,0 +1,3 @@
+-- Apply after 0016 when 0016 has already been run in Supabase.
+revoke all on function public.start_support_conversation(uuid), public.send_conversation_message(uuid,public.message_kind,text,text,text,text,integer), public.mark_conversation_read(uuid), public.request_call(uuid), public.accept_call(uuid), public.end_call(uuid,public.call_status) from public;
+grant execute on function public.start_support_conversation(uuid), public.send_conversation_message(uuid,public.message_kind,text,text,text,text,integer), public.mark_conversation_read(uuid), public.request_call(uuid), public.accept_call(uuid), public.end_call(uuid,public.call_status) to authenticated;
