@@ -1,0 +1,40 @@
+.signOut {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px 0 12px;
+  border: 1px solid #eadfc9;
+  border-radius: 999px;
+  background: #fffdf8;
+  color: #526155;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.signOut::after {
+  content: "↗";
+  color: #ff7a00;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.signOut:hover {
+  border-color: #ff7a00;
+  background: #fff7e6;
+  color: #0f5132;
+  transform: translateY(-1px);
+}
+
+.signOut:focus-visible {
+  outline: 3px solid #ffc10780;
+  outline-offset: 3px;
+}
+
+@media (max-width: 800px) {
+  .signOut { min-height: 34px; padding: 0 10px; }
+}
