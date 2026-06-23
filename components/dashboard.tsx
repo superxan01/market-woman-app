@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./dashboard.module.css";
 import { orderRepository } from "@/lib/repositories";
 import { customerTrackingStages, statusLabel, trackingStageIndex } from "@/lib/order-state";
@@ -97,7 +98,7 @@ export function Dashboard({ role }: { role: UserRole }) {
       {isOperations && <>{nav("orders", "Order queue")}{nav("vendors", "Vendors")}{nav("riders", "Riders")}{nav("feedback", "Service feedback")}{nav("team", "Support team")}</>}
       <div className="profile"><span>{role[0].toUpperCase()}</span><div><strong>{roleLabel(role)}</strong><small>authenticated</small></div></div>
     </aside>
-    <section className="content">
+    <section className="content"><Link className="outline mini" href="/messages">Messages</Link>
       <header className="topbar"><div><p className="eyebrow">LIVE DATABASE</p><h1>{isOperations ? activeTab === "orders" ? "Marketplace control" : activeTab === "vendors" ? "Vendor network" : activeTab === "riders" ? "Rider network" : activeTab === "feedback" ? "Service feedback" : "Operations team" : role === "customer" ? "Your market list" : role === "vendor" ? "Vendor requests" : "Delivery run"}</h1><p>{isOperations ? activeTab === "feedback" ? "Review the delivery experience customers are reporting." : "Assign marketplace work and keep every delivery moving." : role === "customer" ? "Create an order and track it from request to delivery." : role === "vendor" ? "Review assigned requests and send a quote." : "Update the delivery once you pick up and complete an order."}</p></div><button className={styles.signOut} onClick={signOut}>Sign out</button></header>
       {message && <div className="toast">{message}<button onClick={() => setMessage("")}>×</button></div>}
 
