@@ -1,0 +1,44 @@
+.shell {}
+.hero {}
+.panel {}
+.logo {}
+
+@media (max-width: 760px) {
+  .shell { display: block !important; min-height: 100dvh; }
+
+  .hero {
+    min-height: auto;
+    padding: 30px 24px 34px;
+  }
+
+  .logo {
+    width: min(172px, 52vw) !important;
+    margin-bottom: 28px !important;
+  }
+
+  .hero h1 {
+    max-width: 520px;
+    margin-bottom: 14px;
+    font-size: clamp(35px, 10.5vw, 48px) !important;
+    letter-spacing: -2px !important;
+  }
+
+  .hero .lede {
+    max-width: 500px;
+    margin-bottom: 0;
+    font-size: 13px;
+  }
+
+  .panel {
+    min-height: auto;
+    padding: 34px 24px 48px;
+  }
+
+  .panel h2 { font-size: 27px; line-height: 1.15; }
+}
+
+@media (max-width: 380px) {
+  .hero { padding: 26px 20px 30px; }
+  .panel { padding: 30px 20px 42px; }
+  .hero h1 { font-size: 35px !important; }
+}

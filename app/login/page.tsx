@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { UserRole } from "@/lib/types";
 import styles from "./auth.module.css";
+import layout from "./layout.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,14 +38,14 @@ export default function LoginPage() {
     setBusy(false);
   };
 
-  return <main className="welcome-shell">
-    <section className="welcome-copy">
-      <Image src="/marketapp-logo.png" alt="MarketApp" width={368} height={273} priority style={{ display: "block", width: "min(255px, 70%)", height: "auto", marginBottom: 44, filter: "drop-shadow(0 10px 18px #00000024)" }} />
+  return <main className={`welcome-shell ${layout.shell}`}>
+    <section className={`welcome-copy ${layout.hero}`}>
+      <Image className={layout.logo} src="/marketapp-logo.png" alt="MarketApp" width={368} height={273} priority style={{ display: "block", width: "min(255px, 70%)", height: "auto", marginBottom: 44, filter: "drop-shadow(0 10px 18px #00000024)" }} />
       <p className="eyebrow">YOUR LOCAL MARKET, DELIVERED</p>
       <h1>Fresh market shopping,<br /><em>without the running around.</em></h1>
       <p className="lede">Tell us what you need. Our trusted vendors shop it, and a rider brings it to your door.</p>
     </section>
-    <section className="role-panel">
+    <section className={`role-panel ${layout.panel}`}>
       <p className="eyebrow">{mode === "sign-in" ? "WELCOME BACK" : "YOUR MARKETAPP ACCOUNT"}</p>
       <h2>{mode === "sign-in" ? "Pick up where you left off" : "Create your customer account"}</h2>
       <p className="muted">Customer accounts are free. Marketplace team accounts are created by the account owner.</p>
