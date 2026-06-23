@@ -7,7 +7,7 @@
 .field {
   display: grid;
   gap: 7px;
-  color: #4d574f;
+  color: var(--forest);
   font-size: 12px;
   font-weight: 700;
 }
@@ -15,10 +15,10 @@
 .field input {
   width: 100%;
   min-height: 46px;
-  border: 1px solid #d8d0c1;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   background: #fffdf8;
-  color: #19221d;
+  color: var(--charcoal);
   font: inherit;
   font-size: 14px;
   outline: none;
@@ -27,25 +27,25 @@
 }
 
 .field input:focus {
-  border-color: #2f6850;
-  box-shadow: 0 0 0 3px #2f68501a;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px #16a34a1a;
 }
 
 .submit {
   width: 100%;
   min-height: 48px;
   margin-top: 4px;
-  border: 1px solid #19221d;
-  border-radius: 8px;
-  background: #19221d;
+  border: 1px solid var(--green);
+  border-radius: 12px;
+  background: var(--green);
   color: #fff;
-  font: 700 13px Manrope, Arial, sans-serif;
+  font: 700 13px Poppins, Arial, sans-serif;
   transition: background .18s, border-color .18s, transform .18s;
 }
 
 .submit:hover:not(:disabled) {
-  background: #2f6850;
-  border-color: #2f6850;
+  background: var(--forest);
+  border-color: var(--forest);
   transform: translateY(-1px);
 }
 
@@ -53,7 +53,7 @@
 
 .message {
   margin: -4px 0 0;
-  color: #a43c2d;
+  color: #c2410c;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -63,8 +63,8 @@
   margin-top: 18px;
   border: 0;
   background: transparent;
-  color: #2f6850;
-  font: 700 12px Manrope, Arial, sans-serif;
+  color: var(--orange);
+  font: 700 12px Poppins, Arial, sans-serif;
   text-align: center;
   text-decoration: underline;
   text-underline-offset: 3px;
