@@ -14,6 +14,11 @@ export type OrderFeedback = { orderId: string; rating: number; comment?: string 
 export type DeliveryProof = { id: string; orderId: string; fileName: string; url: string };
 export type OrderFeedbackSummary = { orderId: string; rating: number; comment?: string };
 export type CreateOrderInput = { customerName: string; customerPhone: string; items: string[]; area: string; note?: string };
+export type ConversationKind = "customer_support" | "support_vendor" | "support_rider";
+export type MessageKind = "text" | "image" | "file" | "voice_note" | "system";
+export type Conversation = { id: string; kind: ConversationKind; title: string; lastMessageAt: string; unreadCount: number };
+export type ChatMessage = { id: string; conversationId: string; senderId: string; kind: MessageKind; body?: string; fileName?: string; mimeType?: string; durationMs?: number; url?: string; createdAt: string };
+export type CallSession = { id: string; conversationId: string; roomName: string; status: "ringing" | "active" | "rejected" | "missed" | "ended" | "failed"; requestedAt: string; answeredAt?: string };
 export type OrderRepository = {
   listOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
