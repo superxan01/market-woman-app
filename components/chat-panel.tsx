@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { communicationRepository } from "@/lib/communication-repository";
 import type { ChatMessage, Conversation } from "@/lib/types";
 import { useMediaPermission } from "@/hooks/use-media-permission";
@@ -7,8 +7,8 @@ import { CallOverlay } from "./call-overlay";
 
 export function ChatPanel() {
   const [conversations,setConversations]=useState<Conversation[]>([]); const [conversationId,setConversationId]=useState<string>(); const [messages,setMessages]=useState<ChatMessage[]>([]); const [text,setText]=useState(""); const [file,setFile]=useState<File>(); const [error,setError]=useState(""); const [callId,setCallId]=useState<string>(); const [recording,setRecording]=useState(false); const recorder=useRef<MediaRecorder | undefined>(undefined); const chunks=useRef<Blob[]>([]); const {request,stop,state}=useMediaPermission();
-  const load=async()=>{try{const data=await communicationRepository.listConversations();setConversations(data);if(!conversationId&&data[0])setConversationId(data[0].id);}catch(e){setError(e instanceof Error?e.message:"Could not load messages.");}};
-  useEffect(()=>{void load();},[]);
+  const load=useCallback(async()=>{try{const data=await communicationRepository.listConversations();setConversations(data);if(!conversationId&&data[0])setConversationId(data[0].id);}catch(e){setError(e instanceof Error?e.message:"Could not load messages.");}},[conversationId]);
+  useEffect(()=>{void load();},[load]);
   useEffect(()=>{if(!conversationId)return;const refresh=async()=>{try{setMessages(await communicationRepository.messages(conversationId));await communicationRepository.read(conversationId);}catch(e){setError(e instanceof Error?e.message:"Could not load messages.");}};void refresh();const channel=communicationRepository.subscribe(conversationId,refresh);return()=>{void channel.unsubscribe();};},[conversationId]);
   const start=async()=>{try{const id=await communicationRepository.start();setConversationId(id);await load();}catch(e){setError(e instanceof Error?e.message:"Could not start support chat.");}};
   const send=async(e:FormEvent)=>{e.preventDefault();if(!conversationId||(!text&&!file))return;try{await communicationRepository.send(conversationId,text,file?.type.startsWith("image/")?"image":file?"file":"text",file);setText("");setFile(undefined);}catch(e){setError(e instanceof Error?e.message:"Could not send message.");}};
