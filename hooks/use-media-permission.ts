@@ -1,0 +1,3 @@
+"use client";
+import { useCallback,useRef,useState } from "react";
+export function useMediaPermission(){const [state,setState]=useState<"idle"|"requesting"|"granted"|"denied"|"unavailable">("idle");const stream=useRef<MediaStream | undefined>(undefined);const request=useCallback(async(video=false)=>{if(!navigator.mediaDevices?.getUserMedia){setState("unavailable");throw new Error("This browser does not support microphone access.");}setState("requesting");try{stream.current=await navigator.mediaDevices.getUserMedia({audio:true,video});setState("granted");return stream.current;}catch(e){setState("denied");throw e;}},[]);const stop=useCallback(()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=undefined;setState("idle");},[]);return{state,request,stop};}
