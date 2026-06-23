@@ -57,4 +57,6 @@ create policy "conversation members upload chat media" on storage.objects for in
 create policy "conversation members read chat media" on storage.objects for select to authenticated using(bucket_id='chat-media' and public.can_access_conversation((storage.foldername(name))[1]::uuid));
 alter publication supabase_realtime add table public.conversations, public.conversation_messages, public.conversation_read_states, public.call_sessions;
 grant execute on function public.start_support_conversation(uuid), public.send_conversation_message(uuid,public.message_kind,text,text,text,text,integer), public.mark_conversation_read(uuid), public.request_call(uuid), public.accept_call(uuid), public.end_call(uuid,public.call_status) to authenticated;
-revoke all on function public.start_support_conversation(uuid), public.send_conversation_message(uuid,public.message_kind,text,text,text,text,integer), public.mark_conversation_read(uuid), public.request_call(uuid), public.accept_call(uuid), public.end_call(uuid,public.call_status) from public;
+
+
+
