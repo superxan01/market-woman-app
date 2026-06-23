@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { orderRepository } from "@/lib/repositories";
 import { customerTrackingStages, statusLabel, trackingStageIndex } from "@/lib/order-state";
 import { supabase } from "@/lib/supabase";
@@ -90,7 +91,7 @@ export function Dashboard({ role }: { role: UserRole }) {
 
   return <main className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href={`/${role}`}><span className="brand-crop"><img src="/marketapp-brand-board.png" alt="MarketApp" /></span><strong>Market<span>App</span></strong></a>
+      <a className="brand" href={`/${role}`}><Image src="/marketapp-logo.png" alt="MarketApp" width={368} height={273} style={{ display: "block", width: 132, height: "auto", filter: "drop-shadow(0 3px 6px #00000026)" }} /></a>
       <p className="sidebar-label">{roleLabel(role).toUpperCase()} WORKSPACE</p>
       {isOperations && <>{nav("orders", "Order queue")}{nav("vendors", "Vendors")}{nav("riders", "Riders")}{nav("feedback", "Service feedback")}{nav("team", "Support team")}</>}
       <div className="profile"><span>{role[0].toUpperCase()}</span><div><strong>{roleLabel(role)}</strong><small>authenticated</small></div></div>
