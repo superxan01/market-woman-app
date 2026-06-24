@@ -12,5 +12,8 @@ export const communicationRepository = {
   async read(conversationId:string){const {error}=await client().rpc("mark_conversation_read",{conversation:conversationId});if(error)throw error;},
   async requestCall(conversationId:string):Promise<string>{const {data,error}=await client().rpc("request_call",{conversation:conversationId});if(error)throw error;return data;},
   async endCall(callId:string){const {error}=await client().rpc("end_call",{call:callId,result:"ended"});if(error)throw error;},
+  async acceptCall(callId:string){const {data,error}=await client().rpc("accept_call",{call:callId});if(error)throw error;return data as string;},
+  async rejectCall(callId:string){const {error}=await client().rpc("reject_call",{call:callId});if(error)throw error;},
+  subscribeCalls(onChange:()=>void){return client().channel("marketapp-calls").on("postgres_changes",{event:"*",schema:"public",table:"call_sessions"},onChange).subscribe();},
   subscribe(conversationId:string,onChange:()=>void){return client().channel(`conversation:${conversationId}`).on("postgres_changes",{event:"*",schema:"public",table:"conversation_messages",filter:`conversation_id=eq.${conversationId}`},onChange).subscribe();}
 };
