@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { UserRole } from "@/lib/types";
@@ -59,6 +60,7 @@ export default function LoginPage() {
         {message && <p className={styles.message}>{message}</p>}
         <button className={styles.submit} disabled={busy}>{busy ? "Please wait..." : mode === "sign-in" ? "Open my MarketApp" : "Create my account"}</button>
       </form>
+      {mode === "sign-in" && <Link className={styles.switch} href="/forgot-password">Forgot your password?</Link>}
       <button className={styles.switch} onClick={() => { setMode(mode === "sign-in" ? "sign-up" : "sign-in"); setMessage(""); }}>{mode === "sign-in" ? "New to MarketApp? Create an account" : "Already have an account? Sign in"}</button>
     </section>
   </main>;
